@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+//Route::get('/', function () {
+//    return view('welcome');
+//});
+
+Route::get('/auth-test', [\App\Http\Controllers\OauthController::class, 'signinPage']);
+
+Route::get('/test', [\App\Http\Controllers\Controller::class, 'test']);

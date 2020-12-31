@@ -1,6 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\SpotifyController;
+use App\Http\Controllers\OauthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,7 +14,17 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+Route::prefix('oauth/')->name('oauth.')->group(function()
+{
+    Route::get('spotify-redirect', [OauthController::class, 'registerUser'])->name('register-user');
 });
+
+Route::middleware('session.auth')->group(function()
+{
+});
+
+Route::get('/test', function ()
+{
+    return 'Hello Laravel!';
+});
+
