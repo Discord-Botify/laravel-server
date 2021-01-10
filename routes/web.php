@@ -17,6 +17,12 @@ use Illuminate\Support\Facades\Route;
 //    return view('welcome');
 //});
 
-Route::get('/auth-test', [\App\Http\Controllers\OauthController::class, 'signinPage']);
+Route::get('/', [\App\Http\Controllers\OauthController::class, 'signinPage'])->name('login');
+
+Route::middleware('session.auth')->group(function()
+{
+    Route::get('/home', [\App\Http\Controllers\WebpageController::class, 'home'])->name('home');
+});
+
 
 Route::get('/test', [\App\Http\Controllers\Controller::class, 'test']);

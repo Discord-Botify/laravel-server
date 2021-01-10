@@ -50,7 +50,7 @@ class OauthController extends BaseController
         $session = AppSession::startSession($user->user_id);
         Cookie::queue(config('custom.cookie_session_token'), $session->app_session_id);
 
-        return compact('access_token', 'email');
+        return redirect(route('home'));
     }
 
 }

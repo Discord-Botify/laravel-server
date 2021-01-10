@@ -21,10 +21,11 @@ Route::prefix('oauth/')->name('oauth.')->group(function()
 
 Route::middleware('session.auth')->group(function()
 {
+    Route::get('followed-artist/spotify', [SpotifyController::class, 'getFollowedArtistsFromSpotify'])->name('followed-artist-spotify');
 });
 
 Route::get('/test', function ()
 {
-    return 'Hello Laravel!';
+    return 'Hello Botify Laravel!';
 });
 

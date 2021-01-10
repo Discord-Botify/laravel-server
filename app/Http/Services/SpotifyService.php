@@ -4,6 +4,7 @@
 namespace App\Http\Services;
 
 
+use App\Jobs\ProcessArtistEntries;
 use App\Jobs\ProcessPlaylistEntries;
 use App\Models\AppPlaylist;
 use App\Models\AppPlaylistAppSong;
@@ -20,8 +21,8 @@ use SpotifyWebAPI\SpotifyWebAPIException;
 
 class SpotifyService
 {
-    private $session;
-    private $api;
+    private static $session;
+    private static $api;
     private $access_token;
     private $refresh_token;
     private $user_id;
@@ -29,13 +30,19 @@ class SpotifyService
     public function __construct()
     {
         // Register the app with Spotify
-        $this->session = new Session(
-            env('SPOTIFY_CLIENT_ID'),
-            env('SPOTIFY_CLIENT_SECRET'),
-            env('SPOTIFY_REDIRECT_URI'),
-        );
+        if(self::$session == null)
+        {
+            self::$session = new Session(
+                env('SPOTIFY_CLIENT_ID'),
+                env('SPOTIFY_CLIENT_SECRET'),
+                env('SPOTIFY_REDIRECT_URI'),
+            );
+        }
 
-        $this->api = new SpotifyWebAPI();
+        if(self::$api == null)
+        {
+            self::$api = new SpotifyWebAPI();
+        }
     }
 
     public function getAccessToken(string $auth_code = null): string
@@ -47,10 +54,10 @@ class SpotifyService
                 throw new InvalidArgumentException('Access Token has not been gotten yet, please provide a auth code from Spotify');
             }
 
-            $this->session->requestAccessToken($auth_code);
-            $this->access_token = $this->session->getAccessToken();
-            $this->refresh_token = $this->session->getRefreshToken();
-            $this->api->setAccessToken($this->access_token);
+            self::$session->requestAccessToken($auth_code);
+            $this->access_token = self::$session->getAccessToken();
+            $this->refresh_token = self::$session->getRefreshToken();
+            self::$api->setAccessToken($this->access_token);
         }
 
         return $this->access_token;
@@ -60,10 +67,10 @@ class SpotifyService
     {
         $this->checkAccessTokenStatus();
 
-        return $this->api->me();
+        return self::$api->me();
     }
 
-    public function setUser()
+    public function loadUser()
     {
         // Get the user from auth
         $user_id = AppSession::getLoggedInUserId();
@@ -91,15 +98,15 @@ class SpotifyService
         }
 
         $this->access_token = $access_token;
-        $this->api->setAccessToken($access_token);
+        self::$api->setAccessToken($access_token);
         return $this;
     }
 
     public function getRefreshedAccessToken(string $refresh_token)
     {
-        $this->session->setRefreshToken($refresh_token);
-        $this->session->refreshAccessToken($this->refresh_token);
-        $access_token = $this->session->getAccessToken();
+        self::$session->setRefreshToken($refresh_token);
+        self::$session->refreshAccessToken($this->refresh_token);
+        $access_token = self::$session->getAccessToken();
         return $access_token;
     }
 
@@ -127,16 +134,15 @@ class SpotifyService
     {
         $options = [
             'scope' => [
-                'playlist-read-private',
+                'user-follow-read',
                 'user-read-email',
-                'app-remote-control'
             ]
         ];
 
-        return $this->session->getAuthorizeUrl($options);
+        return self::$session->getAuthorizeUrl($options);
     }
 
-    public function getUserPlaylistsFromSpotify()
+    public function getUserFollowedArtistsFromSpotify()
     {
         // Don't allow this to run if a user hasn't been set
         if($this->user_id == null)
@@ -144,117 +150,81 @@ class SpotifyService
             throw new InvalidArgumentException('User has not been set');
         }
 
-        // Get the list of all of the user's playlists. It has to be batched in groups of 50
-        $playlists = new Collection();
-        $playlists_batch = [];
-        $limit = env('APP_ENV') == 'production' ? 50 : 2;
-        $offset = 0;
+        // Get the list of all of the user's followed artists. It has to be batched in groups of 50
+        $artists = new Collection();
+        $artists_batch = [];
+        $limit = env('APP_ENV') == 'production' ? 50 : 5;
+        $after = null;
         do
         {
-            $playlists_batch = $this->api->getMyPlaylists([
+            $artists_batch = self::$api->getUserFollowedArtists([
+                'type' => 'artist',
                 'limit' => $limit,
-                'offset' => $offset
+                'after' => $after
             ]);
-            $playlists->push($playlists_batch->items);
-            $offset += 50;
-        } while (sizeof($playlists_batch->items) == 50);
+            $artists->push($artists_batch->artists->items);
+            // Get the last artist from the request so that we can get the $after
+            $after = $artists_batch->artists->cursors->after;
+        } while (sizeof($artists_batch->artists->items) == 50);
 
-        // Map the playlists into the data format that's going to be in our DB
-        $playlists = collect($playlists)->flatten()->mapWithKeys(function ($item)
+        // Map into the format that will enter our DB
+        $artists = $artists->flatten()->mapWithKeys(function($artist)
         {
             return [
-                $item->id => [
-                    'user_id' => $this->user_id,
-                    'spotify_playlist_id' => $item->id,
-                    'playlist_name' => $item->name,
-                    'playlist_image_url' => $item->images[0]->url,
+                $artist->id => [
+                    'artist_id' => $artist->id,
+                    'artist_name' => $artist->name,
+                    'artist_href' => $artist->href,
+                    'artist_uri' => $artist->uri,
                 ]
             ];
         });
 
-        // For each playlist, we have to grab the songs
-        foreach ($playlists as $id => $playlist)
-        {
-            // Once again, gotta batch. This time we can grab 100 at a time
-            $songs = new Collection();
-            $songs_batch = [];
-            $offset = 0;
-            do
-            {
-                $songs_batch = $this->api->getPlaylistTracks($id, [
-                    'limit' => 100,
-                    'offset' => $offset,
-                ]);
-                $songs->push($songs_batch->items);
-                $offset += 100;
-            } while (sizeof($songs_batch->items) == 100);
+        // TODO put the artists/user relationship in the DB NOW so we can set the notification relationships early
 
-            // Map the songs into the format we need and put them in the playlist array
-            $formatted_songs = $songs->flatten()->mapWithKeys(function ($song) use ($playlist)
-            {
-                // Grab all the artists and format a string for them
-                $artists_string = '';
-                foreach ($song->track->artists as $artist)
-                {
-                    $artists_string .= ($artist->name . ', ');
-                }
-                $artists_string = Str::replaceLast(', ', '', $artists_string);
-                return [
-                    $song->track->id => [
-                        'spotify_song_id' => $song->track->id,
-                        'song_name' => $song->track->name,
-                        'song_duration_ms' => $song->track->duration_ms,
-                        'song_album_art_url' => $song->track->album->images[0]->url,
-                        'artist_name' => $artists_string,
-                    ]
-                ];
-            });
-            $playlist['songs'] = $formatted_songs;
-            $playlists->put($id, $playlist);
-        }
+        // Send the artist to the Database process to add them to the DB
+        ProcessArtistEntries::dispatch($artists, $this->user_id);
+//        $job = new ProcessArtistEntries($artists, $this->user_id, $this);
+//        $job->handle();
 
-        // Start the process that puts all the playlists in the database
-        ProcessPlaylistEntries::dispatch($playlists, $this->user_id);
-
-        // This can be commented out to test the functionality in the current process
-//        $this->processPlaylistEntriesTest($playlists, $this->user_id);
-
-        return $playlists;
+        return $artists->sortBy('artist_name');
     }
 
-    private function processPlaylistEntriesTest(Collection $playlists, string $user_id)
+    public function getArtistsAlbums(string $artist_id): Collection
     {
-        // Delete all playlists and relationships in the DB for this user that are not in this current batch
-        // TODO deleting for now, perhaps we disable later?
-        $playlist_ids = $playlists->pluck('spotify_playlist_id');
-        $playlists_to_delete_query = AppPlaylist::where('user_id', $this->user_id)->whereNotIn('spotify_playlist_id', $playlist_ids);
-        $playlist_ids_to_delete = $playlists_to_delete_query->get()->pluck('app_playlist_id');
-        AppPlaylistAppSong::whereIn('app_playlist_id', $playlist_ids_to_delete)->delete();
-        $playlists_to_delete_query->delete();
-
-
-        foreach ($playlists as $playlist)
+        // Get the list of all of the artist's albums. It has to be batched in groups of 50
+        $albums = new Collection();
+        $albums_batch = [];
+        $limit = env('APP_ENV') == 'production' ? 50 : 50;
+        $offset = null;
+        do
         {
-            // Save the playlist in the DB
-            $db_playlist = AppPlaylist::updateOrCreate(
-                [
-                    'user_id' => $this->user_id,
-                    'spotify_playlist_id' => $playlist['spotify_playlist_id']
-                ],
-                [
-                    'playlist_name' => $playlist['playlist_name'],
-                    'playlist_image_url' => $playlist['playlist_image_url'],
+            $albums_batch = self::$api->getArtistAlbums($artist_id, [
+                'include_groups' => 'album,single,appears_on',
+                'country' => 'US',
+                'limit' => $limit,
+                'offset' => $offset
+            ]);
+
+            $albums->push($albums_batch->items);
+            // Get the last artist from the request so that we can get the $after
+            $offset += 50;
+        } while (sizeof($albums_batch->items) == 50);
+
+        // Return the list sorted with the most recent release at the top
+        return $albums->flatten()->sortByDesc(function ($album) {
+            return $album->release_date;
+        })->mapWithKeys(function ($album) {
+            return [
+                $album->id => [
+                    'album_id' => $album->id,
+                    'album_group' => $album->album_group,
+                    'album_name' => $album->name,
+                    'album_href' => $album->href,
+                    'album_uri' => $album->uri,
                 ]
-            );
-
-            // Save the songs in the DB
-            AppSong::upsert($playlist['songs']->toArray(), ['spotify_song_id'], ['song_name', 'song_duration_ms', 'song_album_art_url', 'artist_name']);
-
-            // update the DB playlist with it's relationship with the songs
-            $song_ids = $playlist['songs']->pluck('spotify_song_id')->toArray();
-            $db_playlist->songs()->sync($song_ids);
-        }
+            ];
+        });
 
     }
-
 }
