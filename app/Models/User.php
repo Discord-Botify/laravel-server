@@ -29,10 +29,8 @@ class User extends Model
         return $this->getOriginal('spotify_access_token_expiration')->lessThan(now());
     }
 
-    public function app_playlists()
+    public function followed_artists()
     {
-        return $this->hasMany(AppPlaylist::class);
+        return $this->belongsToMany(FollowedArtist::class, 'followed_artist_user', 'user_id', 'artist_id')->withTimestamps();
     }
-
-
 }

@@ -13,8 +13,6 @@ use App\Models\AppSong;
 use App\Models\User;
 use http\Exception\InvalidArgumentException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use SpotifyWebAPI\Session;
 use SpotifyWebAPI\SpotifyWebAPI;
 use SpotifyWebAPI\SpotifyWebAPIException;
@@ -45,6 +43,28 @@ class SpotifyService
         }
     }
 
+    public function loadClientCredentials()
+    {
+        self::$session->requestCredentialsToken();
+        $this->access_token = self::$session->getAccessToken();
+        self::$api->setAccessToken($this->access_token);
+    }
+
+    public function loadUser()
+    {
+        // Get the user from auth
+        $user_id = AppSession::getLoggedInUserId();
+
+        $user = User::where('user_id', $user_id)->first();
+        if($user == null)
+        {
+            throw new InvalidArgumentException('could find the provided user');
+        }
+
+        $this->user_id = $user->user_id;
+        $this->setAccessToken($user->spotify_access_token);
+    }
+
     public function getAccessToken(string $auth_code = null): string
     {
         if(blank($this->access_token))
@@ -68,21 +88,6 @@ class SpotifyService
         $this->checkAccessTokenStatus();
 
         return self::$api->me();
-    }
-
-    public function loadUser()
-    {
-        // Get the user from auth
-        $user_id = AppSession::getLoggedInUserId();
-
-        $user = User::where('user_id', $user_id)->first();
-        if($user == null)
-        {
-            throw new InvalidArgumentException('could find the provided user');
-        }
-
-        $this->user_id = $user->user_id;
-        $this->setAccessToken($user->spotify_access_token);
     }
 
     public function setAccessToken(string $access_token): self
@@ -153,7 +158,7 @@ class SpotifyService
         // Get the list of all of the user's followed artists. It has to be batched in groups of 50
         $artists = new Collection();
         $artists_batch = [];
-        $limit = env('APP_ENV') == 'production' ? 50 : 5;
+        $limit = env('APP_ENV') == 'production' ? 50 : 50;
         $after = null;
         do
         {
@@ -180,14 +185,36 @@ class SpotifyService
             ];
         });
 
-        // TODO put the artists/user relationship in the DB NOW so we can set the notification relationships early
+        // Put the artists/user relationship in the DB NOW so we don't get delays in the DB loading if the user refreshes the page fast
+        $artist_ids = $artists->keys();
+        $user = User::find($this->user_id);
+        $user->followed_artists()->sync($artist_ids);
+
 
         // Send the artist to the Database process to add them to the DB
-        ProcessArtistEntries::dispatch($artists, $this->user_id);
-//        $job = new ProcessArtistEntries($artists, $this->user_id, $this);
-//        $job->handle();
+        if(env('APP_ENV') == 'local')
+        {
+            $job = new ProcessArtistEntries($artists, $this->user_id, $this);
+            $job->handle();
+        }
+        else
+        {
+            ProcessArtistEntries::dispatch($artists, $this->user_id);
+        }
 
         return $artists->sortBy('artist_name');
+    }
+
+    public function getUserFollowedArtistsFromDB()
+    {
+        // Don't allow this to run if a user hasn't been set
+        if($this->user_id == null)
+        {
+            throw new InvalidArgumentException('User has not been set');
+        }
+
+        $user = User::with('followed_artists')->find($this->user_id);
+        return $user->followed_artists->keyBy('artist_name')->sortBy('artist_name');
     }
 
     public function getArtistsAlbums(string $artist_id): Collection
@@ -200,7 +227,7 @@ class SpotifyService
         do
         {
             $albums_batch = self::$api->getArtistAlbums($artist_id, [
-                'include_groups' => 'album,single,appears_on',
+                'include_groups' => config('custom.album_include_groups'),
                 'country' => 'US',
                 'limit' => $limit,
                 'offset' => $offset

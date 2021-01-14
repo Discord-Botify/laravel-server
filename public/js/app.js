@@ -1825,17 +1825,23 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: "followed-artists",
   data: function data() {
     return {
       followedArtists: {},
-      needsArtists: true,
       isLoading: false
     };
   },
   props: {
     followedArtistSpotifyRoute: {
+      type: String,
+      required: true
+    },
+    followedArtistDbRoute: {
       type: String,
       required: true
     }
@@ -1847,16 +1853,29 @@ __webpack_require__.r(__webpack_exports__);
     syncSpotifyArtists: function syncSpotifyArtists() {
       var _this = this;
 
-      console.log('sync artists');
-      console.log(this.followedArtistSpotifyRoute);
       this.isLoading = true;
       axios.get(this.followedArtistSpotifyRoute).then(function (response) {
-        console.log(response);
         _this.followedArtists = response.data;
+        _this.isLoading = false;
       });
     },
     grabDbArtists: function grabDbArtists() {
+      var _this2 = this;
+
       console.log('DB artists');
+      this.isLoading = true;
+      axios.get(this.followedArtistDbRoute).then(function (response) {
+        _this2.followedArtists = response.data;
+        _this2.isLoading = false;
+      });
+    }
+  },
+  computed: {
+    listClass: function listClass() {
+      return this.isLoading ? 'list-loading' : 'list-loaded';
+    },
+    needsArtists: function needsArtists() {
+      return !this.isLoading && Object.keys(this.followedArtists).length === 0;
     }
   }
 });
@@ -19382,12 +19401,13 @@ var render = function() {
   var _vm = this
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
-  return _c("div", { staticClass: "col-12" }, [
+  return _c("div", { staticClass: "col-12", class: _vm.listClass }, [
     _vm.needsArtists
       ? _c(
           "div",
           {
-            staticClass: "text-primary row d-flex justify-content-center mt-4"
+            staticClass:
+              "text-primary row d-flex justify-content-center mt-4 mx-1 text-center"
           },
           [
             _vm._v(
@@ -19401,6 +19421,8 @@ var render = function() {
       _c(
         "button",
         {
+          class: { disabled: _vm.isLoading },
+          attrs: { disabled: _vm.isLoading },
           on: {
             click: function($event) {
               return _vm.syncSpotifyArtists()
@@ -19412,23 +19434,25 @@ var render = function() {
     ]),
     _vm._v(" "),
     _c("div", { staticClass: "row mt-2" }, [
-      _c("div", { staticClass: "col-xs-1 col-md-2 col-lg-3" }),
+      _c("div", { staticClass: "col-xs-1 col-md-2" }),
       _vm._v(" "),
-      _c("div", { staticClass: "col-xs-10 col-md-8 col-lg-6" }, [
+      _c("div", { staticClass: "col-xs-10 col-md-8" }, [
         _c(
           "div",
-          { staticClass: "row" },
+          { staticClass: "row justify-content-center" },
           _vm._l(_vm.followedArtists, function(artist) {
             return _c("div", [
               _c("div", {}, [
                 _c("div", { staticClass: "card card-artist m-2" }, [
-                  _c("div", { staticClass: "card-body" }, [
+                  _c("div", { staticClass: "card-header" }, [
                     _vm._v(
                       "\n                                " +
                         _vm._s(artist.artist_name) +
                         "\n                            "
                     )
-                  ])
+                  ]),
+                  _vm._v(" "),
+                  _c("div", { staticClass: "card-body" })
                 ])
               ])
             ])
@@ -19437,7 +19461,7 @@ var render = function() {
         )
       ]),
       _vm._v(" "),
-      _c("div", { staticClass: "col-xs-1 col-md-2 col-lg-3" })
+      _c("div", { staticClass: "col-xs-1 col-md-2" })
     ])
   ])
 }

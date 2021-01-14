@@ -19,7 +19,10 @@ class SpotifyController extends BaseController
 
     public function getFollowedArtsitsFromDB()
     {
+        $service = new SpotifyService();
+        $service->loadUser();
 
+        return $service->getUserFollowedArtistsFromDB();
     }
 
 }

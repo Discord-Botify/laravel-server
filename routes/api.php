@@ -22,6 +22,7 @@ Route::prefix('oauth/')->name('oauth.')->group(function()
 Route::middleware('session.auth')->group(function()
 {
     Route::get('followed-artist/spotify', [SpotifyController::class, 'getFollowedArtistsFromSpotify'])->name('followed-artist-spotify');
+    Route::get('followed-artist', [SpotifyController::class, 'getFollowedArtsitsFromDB'])->name('followed-artist-db');
 });
 
 Route::get('/test', function ()
