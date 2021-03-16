@@ -19,9 +19,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [\App\Http\Controllers\OauthController::class, 'signinPage'])->name('login');
 
+
 Route::middleware('session.auth')->group(function()
 {
     Route::get('/home', [\App\Http\Controllers\WebpageController::class, 'home'])->name('home');
+
+    Route::get('/settings', [\App\Http\Controllers\WebpageController::class, 'settings'])->name('settings');
 });
 
 

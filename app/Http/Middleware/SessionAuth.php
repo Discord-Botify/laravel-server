@@ -5,8 +5,8 @@ namespace App\Http\Middleware;
 use App\Models\AppSession;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\View;
 
 class SessionAuth
 {
@@ -34,6 +34,7 @@ class SessionAuth
         }
 
         AppSession::authenticate($session->user_id);
+        View::share('user', AppSession::user());
         return $next($request);
     }
 }

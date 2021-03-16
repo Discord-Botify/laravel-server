@@ -45,7 +45,7 @@ class QueueNotifications extends Command
         $followed_artists = FollowedArtist::with('users')
             ->when(env('APP_ENV') != 'production', function ($query)
             {
-                $query->take(5);
+//                $query->take(5);
             })
             ->get();
 
@@ -59,8 +59,9 @@ class QueueNotifications extends Command
             // If the artist's last released album is different than artist_last_album_id, they have a new release!
             if($albums->first()['album_id'] != $followed_artist->artist_last_album_id)
             {
+                dump("sending notifications for " . $followed_artist->artist_name);
                 // Determine the number of new releases by subtracting their old artist_album_count from the new album count
-                // TODO maybe we need to instead grab the albums after the saved recent release in case there were removed albums with the added ones
+                // TODO maybe we need to instead grab the albums after the saved recent release in case there were removed albums with the added ones? BIG MAYBE
                 $new_album_count = $albums->count() - $followed_artist->artist_album_count;
 
                 // Grab the number of new releases and make notifications for each user
@@ -71,10 +72,11 @@ class QueueNotifications extends Command
                     {
                         Notification::create([
                             'notification_id' => Str::uuid(),
-                            'notification_sent' => 1, //for now
+                            'notification_sent' => 0,
                             'notification_dismissed' => 0,
                             'user_id_to' => $user->user_id,
                             'artist_name' => $followed_artist->artist_name,
+                            'album_type' => $new_release['album_type'],
                             'album_name' => $new_release['album_name'],
                             'album_href' => $new_release['album_href'],
                             'album_uri' => $new_release['album_uri'],

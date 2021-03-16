@@ -24,6 +24,13 @@ class User extends Model
         'spotify_id',
     ];
 
+    protected $hidden = [
+        'spotify_access_token',
+        'spotify_access_token_expiration',
+        'spotify_refresh_token',
+        'spotify_refresh_token_expiration',
+    ];
+
     public function isTokenExpired()
     {
         return $this->getOriginal('spotify_access_token_expiration')->lessThan(now());
@@ -32,5 +39,11 @@ class User extends Model
     public function followed_artists()
     {
         return $this->belongsToMany(FollowedArtist::class, 'followed_artist_user', 'user_id', 'artist_id')->withTimestamps();
+    }
+
+    public function discord_notifications()
+    {
+        return $this->hasMany(Notification::class, 'user_id_to', 'user_id')
+            ->unsent();
     }
 }

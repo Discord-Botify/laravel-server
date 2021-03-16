@@ -5,4 +5,6 @@ return [
     'cookie_lifetime' => 30, // Minutes
 
     'album_include_groups' => 'album,single',
+
+    'discord_bot_invite' => 'https://discord.com/oauth2/authorize?client_id=636985230883815454&scope=bot&permissions=2048'
 ];

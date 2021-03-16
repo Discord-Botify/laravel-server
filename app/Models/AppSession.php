@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Ramsey\Uuid\Uuid;
 
@@ -16,6 +17,7 @@ class AppSession extends Model
 
     // Instance of the currently authenticated user
     private static $user_id = null;
+    private static $user = null;
 
     protected static function boot()
     {
@@ -56,9 +58,22 @@ class AppSession extends Model
         self::$user_id = null;
     }
 
-    public static function getLoggedInUserId()
+    public static function id()
     {
+        if(self::$user_id === null)
+        {
+            throw new AuthorizationException("User has not been signed in yet");
+        }
         return self::$user_id;
+    }
+
+    public static function user()
+    {
+        if(self::$user === null)
+        {
+            self::$user = User::find(self::id());
+        }
+        return self::$user;
     }
 
 }

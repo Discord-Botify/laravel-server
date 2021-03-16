@@ -5,11 +5,7 @@ namespace App\Http\Services;
 
 
 use App\Jobs\ProcessArtistEntries;
-use App\Jobs\ProcessPlaylistEntries;
-use App\Models\AppPlaylist;
-use App\Models\AppPlaylistAppSong;
 use App\Models\AppSession;
-use App\Models\AppSong;
 use App\Models\User;
 use http\Exception\InvalidArgumentException;
 use Illuminate\Support\Collection;
@@ -53,7 +49,7 @@ class SpotifyService
     public function loadUser()
     {
         // Get the user from auth
-        $user_id = AppSession::getLoggedInUserId();
+        $user_id = AppSession::id();
 
         $user = User::where('user_id', $user_id)->first();
         if($user == null)
@@ -246,6 +242,7 @@ class SpotifyService
                 $album->id => [
                     'album_id' => $album->id,
                     'album_group' => $album->album_group,
+                    'album_type' => $album->album_type,
                     'album_name' => $album->name,
                     'album_href' => $album->href,
                     'album_uri' => $album->uri,

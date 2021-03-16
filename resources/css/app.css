@@ -28,3 +28,16 @@
 .card-artist {
     width: 16rem;
 }
+
+.btn-spotify {
+    color: white;
+    background-color: #1DB954;
+    border-color: #1DB954;
+}
+
+.scrollable-menu {
+    height: auto;
+    max-height: 400px;
+    overflow-x: hidden;
+    min-width: 400px;
+}
