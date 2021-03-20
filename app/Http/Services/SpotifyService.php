@@ -229,6 +229,9 @@ class SpotifyService
                 'offset' => $offset
             ]);
 
+            // Sleep .1 seconds each batch in an attempt to reduce the rate limiter
+            usleep(100000);
+
             $albums->push($albums_batch->items);
             // Get the last artist from the request so that we can get the $after
             $offset += 50;
