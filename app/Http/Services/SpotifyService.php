@@ -9,6 +9,7 @@ use App\Models\AppSession;
 use App\Models\User;
 use http\Exception\InvalidArgumentException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use SpotifyWebAPI\Session;
 use SpotifyWebAPI\SpotifyWebAPI;
 use SpotifyWebAPI\SpotifyWebAPIException;
@@ -154,7 +155,7 @@ class SpotifyService
         // Get the list of all of the user's followed artists. It has to be batched in groups of 50
         $artists = new Collection();
         $artists_batch = [];
-        $limit = env('APP_ENV') == 'production' ? 50 : 50;
+        $limit = config('app.env') == 'production' ? 50 : 50;
         $after = null;
         do
         {
@@ -188,13 +189,15 @@ class SpotifyService
 
 
         // Send the artist to the Database process to add them to the DB
-        if(env('APP_ENV') == 'local')
+        if(config('app.env') == 'local')
         {
+            Log::info("manual run of process artist entries");
             $job = new ProcessArtistEntries($artists, $this->user_id);
             $job->handle();
         }
         else
         {
+            Log::info("Dispatching job for process artist entries");
             ProcessArtistEntries::dispatch($artists, $this->user_id);
         }
 
@@ -218,7 +221,7 @@ class SpotifyService
         // Get the list of all of the artist's albums. It has to be batched in groups of 50
         $albums = new Collection();
         $albums_batch = [];
-        $limit = env('APP_ENV') == 'production' ? 50 : 50;
+        $limit = config('app.env') == 'production' ? 50 : 50;
         $offset = null;
         do
         {

@@ -6,6 +6,7 @@ use App\Http\Services\SpotifyService;
 use App\Models\FollowedArtist;
 use App\Models\Notification;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class QueueNotifications extends Command
@@ -41,12 +42,9 @@ class QueueNotifications extends Command
      */
     public function handle()
     {
+        Log::info("Starting the Notifications Creation job for " . now()->toDateTimeString());
         // Load all artists from the database with their corresponding followers
         $followed_artists = FollowedArtist::with('users')
-            ->when(env('APP_ENV') != 'production', function ($query)
-            {
-//                $query->take(5);
-            })
             ->get();
 
         // For each artist, pull their albums from the Spotify API
@@ -59,7 +57,7 @@ class QueueNotifications extends Command
             // If the artist's last released album is different than artist_last_album_id, they have a new release!
             if($albums->first()['album_id'] != $followed_artist->artist_last_album_id)
             {
-                dump("sending notifications for " . $followed_artist->artist_name);
+                Log::info("sending notifications for " . $followed_artist->artist_name);
                 // Determine the number of new releases by subtracting their old artist_album_count from the new album count
                 // TODO maybe we need to instead grab the albums after the saved recent release in case there were removed albums with the added ones? BIG MAYBE
                 $new_album_count = $albums->count() - $followed_artist->artist_album_count;
@@ -90,5 +88,7 @@ class QueueNotifications extends Command
             $followed_artist->artist_last_album_id = $albums->first()['album_id'];
             $followed_artist->save();
         }
+
+        Log::info("Ending the Notifications job");
     }
 }
