@@ -1,9 +1,10 @@
 <template>
     <div class="col-12" :class="listClass">
-        <div v-if="needsArtists" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Looks like you haven't added any artists to the app! Click the button below to start receiving notifications for Artists you follow on Spotify</div>
+        <div v-show="needsArtists" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Looks like you haven't added any artists to the app! Click the button below to start receiving notifications for Artists you follow on Spotify</div>
         <div class="row d-flex justify-content-center mt-4">
             <button class="btn btn-success btn-spotify" @click="syncSpotifyArtists()" :class="{disabled: isLoading}" :disabled="isLoading">Sync Followed Artists with Spotify</button>
         </div>
+        <div v-show="isLoading" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Grabbing your followed artists from Spotify, this may take a while...</div>
         <div class="row mt-2">
             <div class="col-xs-1 col-md-2"></div>
             <div class="col-xs-10 col-md-8">

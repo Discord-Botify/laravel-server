@@ -190,7 +190,7 @@ class SpotifyService
         // Send the artist to the Database process to add them to the DB
         if(env('APP_ENV') == 'local')
         {
-            $job = new ProcessArtistEntries($artists, $this->user_id, $this);
+            $job = new ProcessArtistEntries($artists, $this->user_id);
             $job->handle();
         }
         else
