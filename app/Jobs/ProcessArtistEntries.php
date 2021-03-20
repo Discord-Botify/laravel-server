@@ -23,11 +23,10 @@ class ProcessArtistEntries implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(Collection $artists, string $user_id, $service)
+    public function __construct(Collection $artists, string $user_id)
     {
         $this->artists = $artists;
         $this->user_id = $user_id;
-        $this->service = $service;
     }
 
     /**
