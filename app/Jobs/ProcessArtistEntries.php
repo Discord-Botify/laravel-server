@@ -25,6 +25,7 @@ class ProcessArtistEntries implements ShouldQueue
      */
     public function __construct(Collection $artists, string $user_id)
     {
+        $this->queue = 'artist_entries';
         $this->artists = $artists;
         $this->user_id = $user_id;
     }
