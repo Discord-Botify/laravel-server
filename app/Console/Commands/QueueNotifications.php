@@ -23,7 +23,7 @@ class QueueNotifications extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Go through all the artists in our database and look if they have new albums';
 
     /**
      * Create a new command instance.

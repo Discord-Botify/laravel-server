@@ -41,6 +41,11 @@ class User extends Model
         return $this->belongsToMany(FollowedArtist::class, 'followed_artist_user', 'user_id', 'artist_id')->withTimestamps();
     }
 
+    public function scopeDiscordUser($query)
+    {
+        return $query->whereNotNull('discord_username');
+    }
+
     public function discord_notifications()
     {
         return $this->hasMany(Notification::class, 'user_id_to', 'user_id')
