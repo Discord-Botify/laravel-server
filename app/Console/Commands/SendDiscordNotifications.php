@@ -6,6 +6,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Discord\Discord;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class SendDiscordNotifications extends Command
@@ -23,6 +24,14 @@ class SendDiscordNotifications extends Command
      * @var string
      */
     protected $description = 'Send queued Discord notifications';
+    /**
+     * @var int
+     */
+    private $notifications_sent;
+    /**
+     * @var int
+     */
+    private $total_notifications;
 
     /**
      * Create a new command instance.
@@ -41,6 +50,8 @@ class SendDiscordNotifications extends Command
      */
     public function handle()
     {
+        $this->notifications_sent = 0;
+
         $discord = new Discord([
             'token' => env('DISCORD_BOT_TOKEN'),
             'pmChannels' => true,
@@ -53,15 +64,31 @@ class SendDiscordNotifications extends Command
         });
         $discord->run();
 
+        while (true) {
+            sleep(1);
+        }
+
     }
 
     protected function sendMessages(Discord $discord)
     {
         // TODO implement notification types based on user selection of preferred notification method
-        // Get all users with pending notifications
+        // Get all users with pending notifications who are registered with Discord
         $users = User::with('discord_notifications')
             ->whereHas('discord_notifications')
+            ->discordUser()
         ->get();
+
+        if ($users->isEmpty())
+        {
+            exit();
+        }
+
+        // Determine the total message count
+        $this->total_notifications = $users->reduce(function ($carry, $user)
+        {
+            return $carry + $user->discord_notifications->count();
+        });
 
         foreach ($users as $user)
         {
@@ -77,11 +104,22 @@ class SendDiscordNotifications extends Command
                 $album_id = Str::afterLast($notification->album_uri, ':');
                 $link = "https://open.spotify.com/album/$album_id";
                 $message = "New $album_type from $artist: $album \n$link";
-                $discord_user->sendMessage($message);
+                $discord_user->sendMessage($message)->done(function ($message) use ($users, $notification)
+                {
+                    // After each message is sent, update the global message counter
+                    $this->notifications_sent++;
 
-                // Mark the notification as sent
-                $notification->notification_sent = 1;
-                $notification->save();
+                    // Mark the notification as sent
+                    $notification->notification_sent = 1;
+                    $notification->save();
+
+                    // When we hit the message limit, end the script
+                    if ($this->notifications_sent >= $this->total_notifications)
+                    {
+                        Log::info('Sent ' . $this->total_notifications . ' notifications to ' . $users->count() . ' users');
+                        exit();
+                    }
+                });
             }
         }
     }

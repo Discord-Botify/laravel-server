@@ -189,7 +189,7 @@ class SpotifyService
 
 
         // Send the artist to the Database process to add them to the DB
-        if(config('app.env') == 'local')
+        if(config('app.env') == 'local' && false)
         {
             Log::info("manual run of process artist entries");
             $job = new ProcessArtistEntries($artists, $this->user_id);
