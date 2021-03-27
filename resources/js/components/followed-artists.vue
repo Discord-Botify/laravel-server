@@ -1,10 +1,10 @@
 <template>
     <div class="col-12" :class="listClass">
-        <div v-show="needsArtists" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Looks like you haven't added any artists to the app! Click the button below to start receiving notifications for Artists you follow on Spotify</div>
+        <div v-if="needsArtists" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Looks like you haven't added any artists to the app! Click the button below to start receiving notifications for Artists you follow on Spotify</div>
         <div class="row d-flex justify-content-center mt-4">
             <button class="btn btn-success btn-spotify" @click="syncSpotifyArtists()" :class="{disabled: isLoading}" :disabled="isLoading">Sync Followed Artists with Spotify</button>
         </div>
-        <div v-show="isLoading" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Grabbing your followed artists from Spotify, this may take a while...</div>
+        <div v-if="isLoadingFromSpotify" class="text-primary row d-flex justify-content-center mt-4 mx-1 text-center">Grabbing your followed artists from Spotify, this may take a while...</div>
         <div class="row mt-2">
             <div class="col-xs-1 col-md-2"></div>
             <div class="col-xs-10 col-md-8">
@@ -34,7 +34,8 @@ export default {
     data: function() {
         return {
             followedArtists: {},
-            isLoading: false,
+            isLoadingFromSpotify: false,
+            isLoadingFromDatabase: false,
         }
     },
     props: {
@@ -46,17 +47,19 @@ export default {
     },
     methods: {
         syncSpotifyArtists: function () {
-            this.isLoading = true;
+            this.isLoadingFromSpotify = true;
             axios.get(this.followedArtistSpotifyRoute)
                 .then((response) => {
                     this.followedArtists = response.data;
-                    this.isLoading = false;
+                    this.isLoadingFromSpotify = false;
                 });
         },
         grabDbArtists: function() {
+            this.isLoadingFromDatabase = true;
             axios.get(this.followedArtistDbRoute)
                 .then((response) => {
                     this.followedArtists = response.data;
+                    this.isLoadingFromDatabase = false;
                 });
         }
     },
@@ -66,6 +69,9 @@ export default {
         },
         needsArtists: function () {
             return !this.isLoading && Object.keys(this.followedArtists).length === 0;
+        },
+        isLoading: function() {
+            return this.isLoadingFromSpotify || this.isLoadingFromDatabase;
         }
     }
 }

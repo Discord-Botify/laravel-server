@@ -1874,12 +1874,14 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: "followed-artists",
   data: function data() {
     return {
       followedArtists: {},
-      isLoading: false
+      isLoadingFromSpotify: false,
+      isLoadingFromDatabase: false
     };
   },
   props: {
@@ -1899,20 +1901,19 @@ __webpack_require__.r(__webpack_exports__);
     syncSpotifyArtists: function syncSpotifyArtists() {
       var _this = this;
 
-      this.isLoading = true;
+      this.isLoadingFromSpotify = true;
       axios.get(this.followedArtistSpotifyRoute).then(function (response) {
         _this.followedArtists = response.data;
-        _this.isLoading = false;
+        _this.isLoadingFromSpotify = false;
       });
     },
     grabDbArtists: function grabDbArtists() {
       var _this2 = this;
 
-      console.log('DB artists');
-      this.isLoading = true;
+      this.isLoadingFromDatabase = true;
       axios.get(this.followedArtistDbRoute).then(function (response) {
         _this2.followedArtists = response.data;
-        _this2.isLoading = false;
+        _this2.isLoadingFromDatabase = false;
       });
     }
   },
@@ -1922,6 +1923,9 @@ __webpack_require__.r(__webpack_exports__);
     },
     needsArtists: function needsArtists() {
       return !this.isLoading && Object.keys(this.followedArtists).length === 0;
+    },
+    isLoading: function isLoading() {
+      return this.isLoadingFromSpotify || this.isLoadingFromDatabase;
     }
   }
 });
@@ -30572,6 +30576,21 @@ var render = function() {
       )
     ]),
     _vm._v(" "),
+    _vm.isLoadingFromSpotify
+      ? _c(
+          "div",
+          {
+            staticClass:
+              "text-primary row d-flex justify-content-center mt-4 mx-1 text-center"
+          },
+          [
+            _vm._v(
+              "Grabbing your followed artists from Spotify, this may take a while..."
+            )
+          ]
+        )
+      : _vm._e(),
+    _vm._v(" "),
     _c("div", { staticClass: "row mt-2" }, [
       _c("div", { staticClass: "col-xs-1 col-md-2" }),
       _vm._v(" "),
@@ -30583,7 +30602,7 @@ var render = function() {
             return _c("div", [
               _c("div", {}, [
                 _c("div", { staticClass: "card card-artist m-2" }, [
-                  _c("div", { staticClass: "card-header" }, [
+                  _c("div", { staticClass: "card-header text-truncate" }, [
                     _vm._v(
                       "\n                                " +
                         _vm._s(artist.artist_name) +
