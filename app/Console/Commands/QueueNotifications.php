@@ -54,41 +54,62 @@ class QueueNotifications extends Command
         {
             $albums = $spotify_service->getArtistsAlbums($followed_artist->artist_id);
 
-            // If the artist's last released album is different than artist_last_album_id, they have a new release!
+            // If the artist's last album is different than artist_last_album_id, maybe they have a release
             if($albums->first()['album_id'] != $followed_artist->artist_last_album_id)
             {
-                Log::info("sending notifications for " . $followed_artist->artist_name);
-                // Determine the number of new releases by subtracting their old artist_album_count from the new album count
-                // TODO maybe we need to instead grab the albums after the saved recent release in case there were removed albums with the added ones? BIG MAYBE
-                $new_album_count = $albums->count() - $followed_artist->artist_album_count;
-
-                // Grab the number of new releases and make notifications for each user
-                $new_releases = $albums->take($new_album_count);
-                foreach ($new_releases as $new_release)
-                {
-                    foreach ($followed_artist->users as $user)
-                    {
-                        Notification::create([
-                            'notification_id' => Str::uuid(),
-                            'notification_sent' => 0,
-                            'notification_dismissed' => 0,
-                            'user_id_to' => $user->user_id,
-                            'artist_name' => $followed_artist->artist_name,
-                            'album_type' => $new_release['album_type'],
-                            'album_name' => $new_release['album_name'],
-                            'album_href' => $new_release['album_href'],
-                            'album_uri' => $new_release['album_uri'],
-                        ]);
-                    }
-                }
+                $this->makeAlbumNotifications($followed_artist, $albums);
             }
 
-            // Always update the artist with the new artist_album_count and artist_last_album_id, in case some albums were removed
+            // Update the artist with the new album data, in case some albums were removed or something
             $followed_artist->artist_album_count = $albums->count();
             $followed_artist->artist_last_album_id = $albums->first()['album_id'];
+            $followed_artist->artist_last_album_date = $albums->first()['album_release_date'];
             $followed_artist->save();
         }
 
         Log::info("Ending the Notifications job");
+    }
+
+    private function makeAlbumNotifications($followed_artist, $albums)
+    {
+        $albums = $albums->reverse();
+
+        // Get the albums after the saved most recent release in the Database
+        $new_releases = $albums->skipUntil(function ($album) use ($followed_artist)
+        {
+            return $album['id'] == $followed_artist->artist_last_album_id;
+        })->skip(1);
+
+        // If new releases is empty, perhaps the most recent release we have saved was removed from Spotify. In that case, grab the releases that have release dates after what we have saved in the DB
+        if($new_releases->isEmpty())
+        {
+            $new_releases = $albums->skipUntil(function ($album) use ($followed_artist)
+            {
+                return $album['album_release_date'] > $followed_artist->artist_last_album_date;
+            });
+        }
+
+        if($new_releases->isEmpty()) return;
+
+        // At this point, we are confident that there are new releases! Let's send notifications for them
+        Log::info("sending notifications for " . $followed_artist->artist_name);
+        foreach ($new_releases as $new_release)
+        {
+            foreach ($followed_artist->users as $user)
+            {
+                Notification::create([
+                    'notification_id' => Str::uuid(),
+                    'notification_sent' => 0,
+                    'notification_dismissed' => 0,
+                    'user_id_to' => $user->user_id,
+                    'artist_name' => $followed_artist->artist_name,
+                    'album_type' => $new_release['album_type'],
+                    'album_name' => $new_release['album_name'],
+                    'album_href' => $new_release['album_href'],
+                    'album_uri' => $new_release['album_uri'],
+                ]);
+            }
+        }
+
     }
 }

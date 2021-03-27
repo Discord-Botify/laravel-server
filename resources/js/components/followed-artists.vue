@@ -12,7 +12,7 @@
                     <div v-for="artist in followedArtists">
                         <div class="">
                             <div class="card card-artist m-2">
-                                <div class="card-header">
+                                <div class="card-header text-truncate">
                                     {{artist.artist_name}}
                                 </div>
                                 <div class="card-body">

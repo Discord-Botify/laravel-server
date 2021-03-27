@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Http\Services\SpotifyService;
 use App\Models\FollowedArtist;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,7 +26,6 @@ class ProcessArtistEntries implements ShouldQueue
      */
     public function __construct(Collection $artists, string $user_id)
     {
-        $this->queue = 'artist_entries';
         $this->artists = $artists;
         $this->user_id = $user_id;
     }
@@ -37,7 +37,8 @@ class ProcessArtistEntries implements ShouldQueue
      */
     public function handle()
     {
-        $service = new SpotifyService();
+        $spotify_service = new SpotifyService();
+        $spotify_service->loadClientCredentials();
         foreach ($this->artists as $artist)
         {
             // If this artist already exists in the DB, skip it so we don't override the job which creates the notification
@@ -45,13 +46,24 @@ class ProcessArtistEntries implements ShouldQueue
             if ($is_artist_in_db) continue;
 
             // Find the number of albums and the most recent release for this artist
-            $albums = $service->getArtistsAlbums($artist['artist_id']);
+            $albums = $spotify_service->getArtistsAlbums($artist['artist_id']);
             $number_of_albums = $albums->count();
             $most_recent_album = $albums->first();
 
             // Save the artist in the DB
             $artist['artist_album_count'] = $number_of_albums;
             $artist['artist_last_album_id'] = $most_recent_album['album_id'];
+            $release_date = $most_recent_album['album_release_date'];
+            if ($most_recent_album['album_release_date_precision'] == 'month')
+            {
+                $release_date = $release_date . "-01";
+            }
+            elseif ($most_recent_album['album_release_date_precision'] == 'year')
+            {
+                $release_date = $release_date . "-01-01";
+            }
+            $artist['artist_last_album_date'] = $release_date;
+
             FollowedArtist::create($artist);
         }
 

@@ -198,7 +198,7 @@ class SpotifyService
         else
         {
             Log::info("Dispatching job for process artist entries");
-            ProcessArtistEntries::dispatch($artists, $this->user_id);
+            ProcessArtistEntries::dispatch($artists, $this->user_id)->onQueue('artist_entries');
         }
 
         return $artists->sortBy('artist_name');
@@ -252,6 +252,8 @@ class SpotifyService
                     'album_name' => $album->name,
                     'album_href' => $album->href,
                     'album_uri' => $album->uri,
+                    'album_release_date' => $album->release_date,
+                    'album_release_date_precision' => $album->release_date_precision,
                 ]
             ];
         });

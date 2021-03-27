@@ -116,7 +116,7 @@ class SendDiscordNotifications extends Command
                     // When we hit the message limit, end the script
                     if ($this->notifications_sent >= $this->total_notifications)
                     {
-                        Log::info('Sent ' . $this->total_notifications . ' notifications to ' . $users->count() . ' users');
+                        Log::info('Sent ' . $this->total_notifications . ' Discord notifications to ' . $users->count() . ' users');
                         exit();
                     }
                 });
