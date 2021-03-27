@@ -54,12 +54,9 @@ export default {
                 });
         },
         grabDbArtists: function() {
-            console.log('DB artists');
-            this.isLoading = true;
             axios.get(this.followedArtistDbRoute)
                 .then((response) => {
                     this.followedArtists = response.data;
-                    this.isLoading = false;
                 });
         }
     },
