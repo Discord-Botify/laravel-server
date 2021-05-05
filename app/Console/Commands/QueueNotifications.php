@@ -64,7 +64,7 @@ class QueueNotifications extends Command
             $followed_artist->artist_album_count = $albums->count();
             $followed_artist->artist_last_album_id = $albums->first()['album_id'];
             $followed_artist->artist_last_album_date = $albums->first()['album_release_date'];
-//            $followed_artist->save();
+            $followed_artist->save();
         }
 
         Log::info("Ending the Notifications job");

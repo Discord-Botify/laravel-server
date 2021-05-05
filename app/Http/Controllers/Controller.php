@@ -16,12 +16,12 @@ class Controller extends BaseController
 
     public function test()
     {
-        $service = new SpotifyService();
-        $service->loadClientCredentials();
-
-        $art = new QueueNotifications();
-        $art->handle();
-        Cookie::queue('test', 'test');
+//        $service = new SpotifyService();
+//        $service->loadClientCredentials();
+//
+//        $art = new QueueNotifications();
+//        $art->handle();
+//        Cookie::queue('test', 'test');
         return 'Test!!';
     }
 }
