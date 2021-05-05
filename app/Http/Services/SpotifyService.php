@@ -241,22 +241,32 @@ class SpotifyService
         } while (sizeof($albums_batch->items) == 50);
 
         // Return the list sorted with the most recent release at the top
-        return $albums->flatten()->sortByDesc(function ($album) {
-            return $album->release_date;
-        })->mapWithKeys(function ($album) {
-            return [
-                $album->id => [
-                    'album_id' => $album->id,
-                    'album_group' => $album->album_group,
-                    'album_type' => $album->album_type,
-                    'album_name' => $album->name,
-                    'album_href' => $album->href,
-                    'album_uri' => $album->uri,
-                    'album_release_date' => $album->release_date,
-                    'album_release_date_precision' => $album->release_date_precision,
-                ]
-            ];
-        });
+        return $albums->flatten()
+            ->sortBy(function ($album) {
+                return $album->release_date;
+            })
+            // Sometimes the artist is an asshole and decides to upload and delete versions of their album/single
+            // with slightly different names. We still get these deleted versions in the API call though.
+            // To filter them out, get rid of all spaces and non-alphanumeric, and convert to lowercase
+            ->unique(function ($album) {
+                return preg_replace("/(\W)+/", "", strtolower($album->name . $album->album_type));
+            })
+            // And because we had to sort by release ASCENDING to do that filter, and get only the first instance of that album, flip it back to descending
+            ->reverse()
+            ->mapWithKeys(function ($album) {
+                return [
+                    $album->id => [
+                        'album_id' => $album->id,
+                        'album_group' => $album->album_group,
+                        'album_type' => $album->album_type,
+                        'album_name' => $album->name,
+                        'album_href' => $album->href,
+                        'album_uri' => $album->uri,
+                        'album_release_date' => $album->release_date,
+                        'album_release_date_precision' => $album->release_date_precision,
+                    ]
+                ];
+            });
 
     }
 }

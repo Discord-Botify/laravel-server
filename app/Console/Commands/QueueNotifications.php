@@ -64,7 +64,7 @@ class QueueNotifications extends Command
             $followed_artist->artist_album_count = $albums->count();
             $followed_artist->artist_last_album_id = $albums->first()['album_id'];
             $followed_artist->artist_last_album_date = $albums->first()['album_release_date'];
-            $followed_artist->save();
+//            $followed_artist->save();
         }
 
         Log::info("Ending the Notifications job");
@@ -77,7 +77,7 @@ class QueueNotifications extends Command
         // Get the albums after the saved most recent release in the Database
         $new_releases = $albums->skipUntil(function ($album) use ($followed_artist)
         {
-            return $album['id'] == $followed_artist->artist_last_album_id;
+            return $album['album_id'] == $followed_artist->artist_last_album_id;
         })->skip(1);
 
         // If new releases is empty, perhaps the most recent release we have saved was removed from Spotify. In that case, grab the releases that have release dates after what we have saved in the DB

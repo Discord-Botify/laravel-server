@@ -60,7 +60,6 @@ class SendDiscordNotifications extends Command
         $discord->on('ready', function(Discord $discord)
         {
             $this->sendMessages($discord);
-
         });
         $discord->run();
 
@@ -77,7 +76,7 @@ class SendDiscordNotifications extends Command
         $users = User::with('discord_notifications')
             ->whereHas('discord_notifications')
             ->discordUser()
-        ->get();
+            ->get();
 
         if ($users->isEmpty())
         {
