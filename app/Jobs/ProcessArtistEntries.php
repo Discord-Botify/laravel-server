@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Http\Services\SpotifyService;
+use App\Library\SpotifyLibrary;
 use App\Models\FollowedArtist;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -53,16 +54,7 @@ class ProcessArtistEntries implements ShouldQueue
             // Save the artist in the DB
             $artist['artist_album_count'] = $number_of_albums;
             $artist['artist_last_album_id'] = $most_recent_album['album_id'];
-            $release_date = $most_recent_album['album_release_date'];
-            if ($most_recent_album['album_release_date_precision'] == 'month')
-            {
-                $release_date = $release_date . "-01";
-            }
-            elseif ($most_recent_album['album_release_date_precision'] == 'year')
-            {
-                $release_date = $release_date . "-01-01";
-            }
-            $artist['artist_last_album_date'] = $release_date;
+            $artist['artist_last_album_date'] = SpotifyLibrary::formatAlbumDate($most_recent_album);
 
             FollowedArtist::create($artist);
         }

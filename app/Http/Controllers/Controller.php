@@ -16,8 +16,10 @@ class Controller extends BaseController
 
     public function test()
     {
-//        $service = new SpotifyService();
-//        $service->loadClientCredentials();
+        $service = new SpotifyService();
+        $service->loadClientCredentials();
+
+        dd($service->getArtistsAlbums(config('custom.death_grips_id')));
 //
 //        $art = new QueueNotifications();
 //        $art->handle();
