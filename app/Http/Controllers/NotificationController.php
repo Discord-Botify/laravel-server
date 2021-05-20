@@ -14,7 +14,8 @@ class NotificationController extends BaseController
 {
     public function unDismissed()
     {
-        $notifications = Notification::select([
+        $notifications = Notification::query()
+        ->select([
             'notification_id',
             'artist_name',
             'album_type',
@@ -22,8 +23,9 @@ class NotificationController extends BaseController
             'album_uri',
             'created_at'
         ])
+            ->where('user_id_to', AppSession::id())
             ->unDismissed()
-            ->orderBy('created_at')
+            ->orderBy('created_at',' DESC')
             ->get()
             ->keyBy('notification_id');
 

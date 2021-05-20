@@ -9,20 +9,11 @@
 
 .root {
     background-color: #42474C;
-    /*height: 100%;*/
+    min-height: 100vh;
 }
 
 .text-primary {
     color: #ffffff !important;
-}
-
-.list-loading {
-    height: 100%;
-    min-height: 100vh;
-}
-
-.list-loaded {
-    min-height: 100vh;
 }
 
 .card-artist {

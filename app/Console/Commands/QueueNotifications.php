@@ -101,7 +101,7 @@ class QueueNotifications extends Command
             {
                 Notification::create([
                     'notification_id' => Str::uuid(),
-                    'notification_sent' => 0,
+                    'notification_sent' => filled($user->discord_id) ? 0 : 1, // Don't mark notifications as unsent if we can't send them
                     'notification_dismissed' => 0,
                     'user_id_to' => $user->user_id,
                     'artist_name' => $followed_artist->artist_name,
