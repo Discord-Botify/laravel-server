@@ -25,7 +25,7 @@ class NotificationController extends BaseController
         ])
             ->where('user_id_to', AppSession::id())
             ->unDismissed()
-            ->orderBy('created_at',' DESC')
+            ->orderBy('created_at','DESC')
             ->get()
             ->keyBy('notification_id');
 
